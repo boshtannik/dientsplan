@@ -51,8 +51,8 @@ fn room_crud() {
     assert_eq!(new_room.name, "Тестовая");
     assert_eq!(new_room.required, 1);
 
-    let updated = db.update_room(new_room.id, &CreateRoom {
-        key: "test_room".into(), name: "Тестовая Обновлённая".into(), required: 2, gender: "M".into(),
+    let updated = db.update_room(new_room.id, &UpdateRoom {
+        key: Some("test_room".into()), name: Some("Тестовая Обновлённая".into()), required: Some(2), gender: Some("M".into()),
     }).unwrap();
     assert_eq!(updated.name, "Тестовая Обновлённая");
     assert_eq!(updated.required, 2);
@@ -335,6 +335,24 @@ fn auto_fill_respects_gender() {
             }
         }
     }
+}
+
+#[test]
+fn manual_assignment_allows_different_gender() {
+    let (db, bid) = test_db();
+    let people = db.list_duty_people(bid).unwrap();
+    let rooms = db.list_rooms(bid).unwrap();
+    let m_room = rooms.iter().find(|r| r.gender == "M").unwrap();
+    let f_person = people.iter().find(|p| p.gender == "F").unwrap();
+
+    let p = db.create_period(&CreatePeriod {
+        name: "Test".into(), start_date: future_date(1), num_days: 3, building_id: bid,
+    }).unwrap();
+
+    let res = db.set_assignment(p.id, &SetAssignment {
+        person_id: f_person.id, room_id: m_room.id, day: 0,
+    });
+    assert!(res.is_ok(), "manual assignment should allow assigning female to male-recommended room");
 }
 
 // ─── Auto-fill ranking: fewer periods first ───

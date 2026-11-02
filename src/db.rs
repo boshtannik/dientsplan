@@ -113,9 +113,20 @@ impl Db {
         diesel::insert_into(rooms::table).values(NewRoom { building_id: building_id as i32, key: &input.key, name: &input.name, required: input.required as i32, gender: &input.gender }).execute(&mut c)?;
         Ok(rooms::table.order(rooms::id.desc()).select(RoomRow::as_select()).first(&mut c)?.into_api())
     }
-    pub fn update_room(&self, id: i64, input: &CreateRoom) -> Result<Room, DbError> {
+    pub fn update_room(&self, id: i64, input: &UpdateRoom) -> Result<Room, DbError> {
         let mut c = self.conn()?;
-        diesel::update(rooms::table.filter(rooms::id.eq(id as i32))).set((rooms::key.eq(&input.key), rooms::name.eq(&input.name), rooms::required.eq(input.required as i32), rooms::gender.eq(&input.gender))).execute(&mut c)?;
+        if let Some(ref key) = input.key {
+            diesel::update(rooms::table.filter(rooms::id.eq(id as i32))).set(rooms::key.eq(key)).execute(&mut c)?;
+        }
+        if let Some(ref name) = input.name {
+            diesel::update(rooms::table.filter(rooms::id.eq(id as i32))).set(rooms::name.eq(name)).execute(&mut c)?;
+        }
+        if let Some(required) = input.required {
+            diesel::update(rooms::table.filter(rooms::id.eq(id as i32))).set(rooms::required.eq(required as i32)).execute(&mut c)?;
+        }
+        if let Some(ref gender) = input.gender {
+            diesel::update(rooms::table.filter(rooms::id.eq(id as i32))).set(rooms::gender.eq(gender)).execute(&mut c)?;
+        }
         Ok(rooms::table.filter(rooms::id.eq(id as i32)).select(RoomRow::as_select()).first(&mut c)?.into_api())
     }
     pub fn delete_room(&self, id: i64) -> Result<(), DbError> {
@@ -416,7 +427,6 @@ impl Db {
         let (pid, rid, perid) = (input.person_id as i32, input.room_id as i32, period_id as i32);
         let room = rooms::table.filter(rooms::id.eq(rid).and(rooms::active.eq(1))).select(RoomRow::as_select()).first(&mut c)?;
         let person = people::table.filter(people::id.eq(pid).and(people::active.eq(1))).select(PersonRow::as_select()).first(&mut c)?;
-        if !room.gender.is_empty() && person.gender != room.gender { return Err(DbError::Diesel(diesel::result::Error::NotFound)); }
         let period = self.get_period(period_id)?;
         if self.period_status(&period) == "finished" { return Err(DbError::Forbidden("Нельзя изменять завершённый период".into())); }
         let absent: bool = self.person_absent_on_period(pid, &period)?;

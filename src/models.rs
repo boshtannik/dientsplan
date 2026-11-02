@@ -125,6 +125,13 @@ pub struct CreateBuilding { pub name: String }
 #[derive(Debug, Deserialize)]
 pub struct CreateRoom { pub key: String, pub name: String, pub required: i64, pub gender: String }
 #[derive(Debug, Deserialize)]
+pub struct UpdateRoom {
+    pub key: Option<String>,
+    pub name: Option<String>,
+    pub required: Option<i64>,
+    pub gender: Option<String>,
+}
+#[derive(Debug, Deserialize)]
 pub struct CreatePerson {
     pub name: Option<String>,
     pub gender: Option<String>,

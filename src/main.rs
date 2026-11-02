@@ -340,7 +340,7 @@ async fn create_room(State(db): State<S>, Path(bid): Path<i64>, q: Query<TokenQu
     Ok(Json(db.create_room(bid, &input)?))
 }
 
-async fn update_room(State(db): State<S>, Path(id): Path<i64>, q: Query<TokenQuery>, Json(input): Json<CreateRoom>) -> Result<Json<Room>, StatusCode> {
+async fn update_room(State(db): State<S>, Path(id): Path<i64>, q: Query<TokenQuery>, Json(input): Json<UpdateRoom>) -> Result<Json<Room>, StatusCode> {
     let _ctx = extract_auth(&db, q.token.as_deref(), Some("admin")).await?;
     Ok(Json(db.update_room(id, &input)?))
 }

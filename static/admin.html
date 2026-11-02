@@ -152,10 +152,38 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 <div class="mo" id="aModal"><div class="md">
   <button class="cb" onclick="hideModal('aModal')">&times;</button>
   <h3 id="aTitle">Назначить</h3>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding:6px 10px;background:var(--bg);border-radius:6px;font-size:.78rem">
+    <span style="color:var(--muted)">Рекомендация:</span>
+    <select id="aRoomGenSelect" onchange="quickSetRoomGender(this.value)" style="background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:3px 6px;font-size:.78rem">
+      <option value="">Любой (М/Ж)</option>
+      <option value="M">Только М</option>
+      <option value="F">Только Ж</option>
+    </select>
+  </div>
   <div class="pg" id="aPeople"></div>
   <div class="pg">
-    <button class="fb" onclick="clearCell()" title="Убрать всех с этого дня"/>Очистить клетку</button>
-    <button class="fb" onclick="clearWeek()" title="Убрать всех на всю неделю"/>Очистить неделю</button>
+    <button class="fb" onclick="clearCell()" title="Убрать всех с этого дня">Очистить клетку</button>
+    <button class="fb" onclick="clearWeek()" title="Убрать всех на всю неделю">Очистить неделю</button>
+  </div>
+</div></div>
+
+<div class="mo" id="rModal"><div class="md">
+  <button class="cb" onclick="hideModal('rModal')">&times;</button>
+  <h3 id="rModalTitle">Настройка помещения</h3>
+  <input type="hidden" id="rModalId">
+  <input type="hidden" id="rModalKey">
+  <label>Название</label><input id="rModalName" placeholder="Название помещения">
+  <label>Человек на смену</label><input id="rModalReq" type="number" min="1" value="1">
+  <label>Рекомендованный пол</label>
+  <select id="rModalGender">
+    <option value="">Любой (М и Ж)</option>
+    <option value="M">Мужской (М)</option>
+    <option value="F">Женский (Ж)</option>
+  </select>
+  <div style="font-size:.75rem;color:var(--muted);margin-bottom:12px">Пол носит рекомендательный характер для автозаполнения. Назначать вручную можно любого человека.</div>
+  <div style="display:flex;gap:8px">
+    <button class="btn btn-p" onclick="saveRoomModal()" style="flex:1">Сохранить</button>
+    <button class="btn btn-r" onclick="deleteRoomFromModal()" style="flex:none">Удалить</button>
   </div>
 </div></div>
 
@@ -294,7 +322,8 @@ async function loadView(){
   for(const room of view.rooms){
     const tr=document.createElement('tr');
     const gl=room.gender==='M'?'М':room.gender==='F'?'Ж':'';
-    tr.innerHTML=`<td class="rh" style="white-space:nowrap"><span style="color:var(--${room.gender==='F'?'pink':'accent'})">●</span> ${room.name} <span style="color:var(--muted);font-size:.7rem">(${room.required}${gl})</span></td>`;
+    const gcolor=room.gender==='F'?'pink':(room.gender==='M'?'accent':'muted');
+    tr.innerHTML=`<td class="rh" style="white-space:nowrap;cursor:pointer" onclick="openRoomModalById(${room.id})" title="Нажмите, чтобы настроить помещение"><span style="color:var(--${gcolor})">●</span> ${room.name} <span style="color:var(--muted);font-size:.7rem">(${room.required}${gl?' '+gl:''})</span> <span style="opacity:.4;font-size:.7rem">✎</span></td>`;
     for(const day of view.days){
       const td=document.createElement('td');td.className='dc';
       td.onclick=()=>openAssign(room,day.day);
@@ -352,9 +381,18 @@ async function promotePerson(id){if(!confirm('Сделать админом? Т�
 async function loadRooms(){
   if(!bId)return;
   const rs=await api(`/api/buildings/${bId}/rooms`);
-  document.getElementById('rL').innerHTML=rs.map(r=>
-    `<div class="pitem"><span style="color:var(--${r.gender==='F'?'pink':'accent'})">●</span><span class="pn">${escHtml(r.name)}</span><span style="color:var(--muted);font-size:.75rem">${r.required}${r.gender?' '+r.gender:''}</span><button onclick="event.stopPropagation();editRoom(${r.id},'${r.key.replace(/'/g,"\\'")}','${r.name.replace(/'/g,"\\'")}',${r.required},'${r.gender}')" title="Ред.">✎</button><button onclick="event.stopPropagation();delRoom(${r.id})" title="Удалить">x</button></div>`
-  ).join('');
+  document.getElementById('rL').innerHTML=rs.map(r=>{
+    const gcolor=r.gender==='F'?'pink':(r.gender==='M'?'accent':'muted');
+    const gl=r.gender==='M'?'М':r.gender==='F'?'Ж':'Все';
+    return `<div class="pitem" onclick="openRoomModalById(${r.id})">
+      <span style="color:var(--${gcolor})">●</span>
+      <span class="pn">${escHtml(r.name)}</span>
+      <span style="color:var(--muted);font-size:.75rem">${r.required} чел · ${gl}</span>
+      <button onclick="event.stopPropagation();cycleRoomGender(${r.id})" title="Быстро сменить пол (М -> Ж -> Все)" style="border:none;background:rgba(255,255,255,.08);color:var(--text);border-radius:3px;padding:2px 6px;font-size:.7rem;cursor:pointer">${gl}</button>
+      <button onclick="event.stopPropagation();openRoomModalById(${r.id})" title="Редактировать" style="border:none;background:none;color:var(--muted);cursor:pointer">✎</button>
+      <button onclick="event.stopPropagation();delRoom(${r.id})" title="Удалить" style="border:none;background:none;color:var(--red);cursor:pointer">x</button>
+    </div>`;
+  }).join('');
 }
 async function addRoom(){
   const key=document.getElementById('nRK').value.trim().toLowerCase().replace(/\s+/g,'_');
@@ -367,12 +405,41 @@ async function addRoom(){
   document.getElementById('nRR').value='1';document.getElementById('nRG').value='';
   await loadRooms();if(pId&&bId)loadView();
 }
-async function editRoom(id,key,name,required,gender){
-  const newKey=prompt('Ключ:',key);if(newKey===null)return;
-  const newName=prompt('Название:',name);if(newName===null)return;
-  const newReq=parseInt(prompt('Человек:',required))||1;
-  const newGen=prompt('Пол (M/F/пусто):',gender);
-  await api(`/api/rooms/${id}`,{method:'PUT',body:{key:newKey.trim(),name:newName.trim(),required:newReq,gender:newGen||''}});
+async function openRoomModalById(id){
+  const rs=await api(`/api/buildings/${bId}/rooms`);
+  const r=rs.find(x=>x.id===id);
+  if(!r)return;
+  document.getElementById('rModalId').value=r.id;
+  document.getElementById('rModalKey').value=r.key;
+  document.getElementById('rModalName').value=r.name;
+  document.getElementById('rModalReq').value=r.required;
+  document.getElementById('rModalGender').value=r.gender||'';
+  showModal('rModal');
+}
+async function saveRoomModal(){
+  const id=document.getElementById('rModalId').value;
+  const key=document.getElementById('rModalKey').value;
+  const name=document.getElementById('rModalName').value.trim();
+  const required=parseInt(document.getElementById('rModalReq').value)||1;
+  const gender=document.getElementById('rModalGender').value;
+  if(!name)return;
+  await api(`/api/rooms/${id}`,{method:'PUT',body:{key,name,required,gender}});
+  hideModal('rModal');
+  await loadRooms();if(pId&&bId)loadView();
+}
+async function deleteRoomFromModal(){
+  const id=document.getElementById('rModalId').value;
+  if(!confirm('Удалить помещение?'))return;
+  hideModal('rModal');
+  await api(`/api/rooms/${id}`,{method:'DELETE'});
+  await loadRooms();if(pId&&bId)loadView();
+}
+async function cycleRoomGender(id){
+  const rs=await api(`/api/buildings/${bId}/rooms`);
+  const r=rs.find(x=>x.id===id);
+  if(!r)return;
+  const nextGen = r.gender==='M' ? 'F' : (r.gender==='F' ? '' : 'M');
+  await api(`/api/rooms/${id}`,{method:'PUT',body:{gender:nextGen}});
   await loadRooms();if(pId&&bId)loadView();
 }
 async function delRoom(id){if(!confirm('Удалить помещение?'))return;await api(`/api/rooms/${id}`,{method:'DELETE'});await loadRooms();if(pId&&bId)loadView();}
@@ -381,18 +448,46 @@ let pRoom=null,pDay=null;
 function openAssign(room,day){
   pRoom=room;pDay=day;
   document.getElementById('aTitle').textContent=room.name+' — Д'+(day+1);
+  if(document.getElementById('aRoomGenSelect')){
+    document.getElementById('aRoomGenSelect').value=room.gender||'';
+  }
   const dv=view.days.find(d=>d.day===day);
   const ex=dv?dv.assignments.filter(a=>a.room_id===room.id).map(a=>a.person_id):[];
   const full=ex.length>=room.required;
   const absIds=view.absences.map(a=>a.person_id);
-  const suit=people.filter(p=>!room.gender||p.gender===room.gender);
-  document.getElementById('aPeople').innerHTML=suit.length===0?'<div class="empty">Нет подходящих</div>':
-    suit.map(p=>{
+  
+  // Show all active people, matching recommended gender sorted first
+  const activeDutyPeople = people.filter(p=>p.role!=='superadmin');
+  const sorted = [...activeDutyPeople].sort((a,b)=>{
+    if(room.gender){
+      const aMatch = a.gender === room.gender ? 0 : 1;
+      const bMatch = b.gender === room.gender ? 0 : 1;
+      if(aMatch !== bMatch) return aMatch - bMatch;
+    }
+    return a.name.localeCompare(b.name);
+  });
+
+  document.getElementById('aPeople').innerHTML=sorted.length===0?'<div class="empty">Нет людей</div>':
+    sorted.map(p=>{
       const al=ex.includes(p.id);const isAbs=absIds.includes(p.id);
       const cls=full&&!al?'dis':al?'sel':'';
-      return`<div class="prow"><button class="pb ${cls}" ${full&&!al||isAbs?'disabled':''} onclick="selPerson(${p.id})"><span class="gb ${p.gender.toLowerCase()}"></span>${escHtml(p.name)}${al?' ✓':''}${isAbs?' !':''}</button><button class="fb" onclick="fillPeriod(${p.id})" title="На весь период">На весь период</button><button class="fb" onclick="fillFromDay(${p.id})" title="С этого дня до конца">До конца</button></div>`;
+      const isOther=room.gender && p.gender!==room.gender;
+      const note=isOther?`<span style="font-size:.68rem;opacity:.6;margin-left:2px">(${p.gender==='M'?'М':'Ж'})</span>`:'';
+      return`<div class="prow"><button class="pb ${cls}" ${full&&!al||isAbs?'disabled':''} onclick="selPerson(${p.id})"><span class="gb ${p.gender.toLowerCase()}"></span>${escHtml(p.name)}${note}${al?' ✓':''}${isAbs?' !':''}</button><button class="fb" onclick="fillPeriod(${p.id})" title="На весь период">На весь период</button><button class="fb" onclick="fillFromDay(${p.id})" title="С этого дня до конца">До конца</button></div>`;
     }).join('');
   showModal('aModal');
+}
+async function quickSetRoomGender(newGen){
+  if(!pRoom)return;
+  await api(`/api/rooms/${pRoom.id}`,{method:'PUT',body:{gender:newGen}});
+  pRoom.gender=newGen;
+  if(view&&view.rooms){
+    const r=view.rooms.find(x=>x.id===pRoom.id);
+    if(r)r.gender=newGen;
+  }
+  await loadRooms();
+  openAssign(pRoom,pDay);
+  if(pId&&bId)loadView();
 }
 async function selPerson(pid){
   if(!pRoom||!pId)return;
@@ -557,7 +652,7 @@ function showQR(url){
   showModal('qrModal');
 }
 
-document.addEventListener('keydown',e=>{if(e.key==='Escape')['aModal','pModal','hModal','abModal','qrModal','newPersonModal'].forEach(hideModal);});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')['aModal','pModal','hModal','abModal','qrModal','newPersonModal','rModal'].forEach(hideModal);});
 
 (async()=>{
   await waitForAuth();
