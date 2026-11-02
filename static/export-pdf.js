@@ -12,6 +12,7 @@ const PDF_TRANSLATIONS = {
     weekdays: ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'],
     footerNote: 'Hinweis: Bitte die Dienste gewissenhaft durchführen und abhaken (✓).',
     generatedAt: 'Erstellt am:',
+    noData: 'Keine Daten',
     printBtn: '🖨️ Drucken / Als PDF speichern',
     closeBtn: '✕ Schließen',
     rooms: {
@@ -44,6 +45,7 @@ const PDF_TRANSLATIONS = {
     weekdays: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'],
     footerNote: 'Отметка о выполнении дежурства: галочка (✓), крестик или подпись.',
     generatedAt: 'Сформировано:',
+    noData: 'Нет данных',
     printBtn: '🖨️ Печать / Сохранить в PDF',
     closeBtn: '✕ Закрыть',
     rooms: {
@@ -143,7 +145,7 @@ function generatePrintHtml(viewData, initialLang) {
 <style>
   @page {
     size: A4 landscape;
-    margin: 10mm 12mm 10mm 12mm;
+    margin: 8mm 10mm 8mm 10mm;
   }
   * {
     box-sizing: border-box;
@@ -262,6 +264,12 @@ function generatePrintHtml(viewData, initialLang) {
     text-align: center;
     vertical-align: middle;
   }
+  .duty-table thead {
+    display: table-header-group;
+  }
+  .duty-table tr {
+    page-break-inside: avoid;
+  }
   .duty-table th {
     background: #f1f5f9;
     color: #000;
@@ -270,17 +278,17 @@ function generatePrintHtml(viewData, initialLang) {
     padding: 10px 4px;
   }
   .duty-table th.col-name {
-    width: 25%;
+    width: 26%;
     text-align: left;
     padding-left: 12px;
   }
   .duty-table th.col-room {
-    width: 23%;
+    width: 24%;
     text-align: left;
     padding-left: 12px;
   }
   .duty-table th.col-day {
-    width: calc(52% / 7);
+    width: calc(50% / 7);
   }
 
   .duty-table td.cell-name {
@@ -301,7 +309,7 @@ function generatePrintHtml(viewData, initialLang) {
     font-weight: 500;
   }
   .duty-table td.cell-day {
-    height: 52px;
+    height: 64px;
     background: #fff;
     cursor: default;
   }
@@ -392,6 +400,16 @@ function formatDayHeaderLocal(startDateStr, dayOffset, lang) {
   return wd + ' ' + dd + '.' + mm;
 }
 
+function formatDateRange(startDateStr, numDays) {
+  if (!startDateStr) return '';
+  const parts = startDateStr.split('-').map(Number);
+  if (parts.length < 3 || isNaN(parts[0])) return startDateStr;
+  const start = new Date(parts[0], parts[1] - 1, parts[2]);
+  const end = new Date(parts[0], parts[1] - 1, parts[2] + Math.max(0, (numDays || 1) - 1));
+  const f = d => String(d.getDate()).padStart(2, '0') + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + d.getFullYear();
+  return f(start) + ' — ' + f(end);
+}
+
 function getLocalizedRoomNameLocal(room, lang) {
   const t = TRANSLATIONS[lang];
   if (lang === 'de') {
@@ -469,8 +487,8 @@ function render(lang) {
   // Header
   document.getElementById('titleMain').textContent = t.docTitle;
   document.getElementById('titleSub').textContent = b.name || t.buildingDefault;
-  document.getElementById('metaPeriod').textContent = (p.name || (t.periodPrefix + ' ' + (p.start_date || '')));
-  document.getElementById('metaBuilding').textContent = t.periodPrefix + ' ' + (p.start_date || '');
+  document.getElementById('metaPeriod').textContent = (p.name || '');
+  document.getElementById('metaBuilding').textContent = formatDateRange(p.start_date, p.num_days || days.length);
 
   // Table Head
   let thHtml = '<tr><th class="col-name">' + t.colName + '</th><th class="col-room">' + t.colRoom + '</th>';
@@ -485,7 +503,7 @@ function render(lang) {
   const rows = buildDutyRowsLocal(VIEW, lang);
   let tbHtml = '';
   if (rows.length === 0) {
-    tbHtml = '<tr><td colspan="' + (2 + days.length) + '" style="padding:24px;color:#94a3b8;font-style:italic">Нет данных</td></tr>';
+    tbHtml = '<tr><td colspan="' + (2 + days.length) + '" style="padding:24px;color:#94a3b8;font-style:italic">' + t.noData + '</td></tr>';
   } else {
     for (const r of rows) {
       tbHtml += '<tr>';
@@ -528,8 +546,12 @@ setTimeout(function() {
 </html>`;
 }
 
+// Currently selected period data (set when the modal is opened)
+let pdfExportView = null;
+
 // Open Export Modal
-function openPdfModal() {
+function openPdfModal(viewData) {
+  if (viewData) pdfExportView = viewData;
   let modal = document.getElementById('pdfModal');
   if (!modal) {
     modal = document.createElement('div');
@@ -570,12 +592,13 @@ function doExportPdfFromModal() {
   const selectedRadio = document.querySelector('input[name="pdfExportLang"]:checked');
   const lang = selectedRadio ? selectedRadio.value : 'de';
 
-  if (!window.view) {
+  const viewData = pdfExportView || window.view;
+  if (!viewData) {
     alert('Нет загруженных данных расписания для экспорта');
     return;
   }
 
-  const printHtml = generatePrintHtml(window.view, lang);
+  const printHtml = generatePrintHtml(viewData, lang);
   const win = window.open('', '_blank');
   if (!win) {
     alert('Всплывающее окно заблокировано браузером. Разрешите всплывающие окна для экспорта.');

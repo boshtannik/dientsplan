@@ -61,6 +61,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 <div class="toolbar" id="toolbar">
   <span id="pBadge"></span>
   <select id="pSel"></select>
+  <button class="btn-p" id="btnExportPdf" onclick="openPdfModal(view)" title="Экспорт текущего периода в PDF (A4, ландшафт)" style="margin-left:auto">📄 PDF</button>
 </div>
 
 <div class="wrap">
@@ -99,6 +100,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 </div></div>
 
 <script src="/menu.js"></script>
+<script src="/export-pdf.js"></script>
 <script>
 let bId=null,pId=null,view=null,myId=null,dsToken=null;
 
@@ -160,6 +162,7 @@ function updatePeriodBadge(ps){
 async function loadView(){
   if(!pId||!bId)return;
   try{view=await api('/api/periods/'+pId+'/view?building_id='+bId);}catch(e){view=null;}
+  window.view=view;
   if(!view){document.getElementById('emp').style.display='';return;}
   document.getElementById('emp').style.display='none';
   document.getElementById('gH').innerHTML='<tr><th class="rh">Помещение</th>'+view.days.map(d=>'<th>'+d.date+'</th>').join('')+'</tr>';

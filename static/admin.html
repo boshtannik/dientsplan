@@ -96,6 +96,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
   <button class="btn-p" onclick="openNewPeriodModal()">+ Период</button>
   <button class="btn-g" onclick="nextPeriod()">След.</button>
   <button class="btn-p" onclick="autoFill()">Заполнить</button>
+  <div class="sep-v"></div>
+  <button class="btn-s" id="btnExportPdf" onclick="openPdfModal(view)" title="Экспорт текущего периода в PDF (A4, ландшафт)">📄 PDF</button>
   <button class="btn-s" id="btnEditPeriod" onclick="editPeriod()" style="display:none">✎</button>
   <button class="btn-r" id="btnDelPeriod" onclick="delPeriod()" style="display:none">X</button>
 </div>
@@ -231,6 +233,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 
 <script src="/qrcode.min.js"></script>
 <script src="/menu.js"></script>
+<script src="/export-pdf.js"></script>
 <script>
 let bId=null,pId=null,view=null,people=[],dsToken=null;
 
@@ -314,6 +317,7 @@ function updatePeriodButtons(ps){
 async function loadView(){
   if(!pId||!bId)return;
   try{view=await api(`/api/periods/${pId}/view?building_id=${bId}`);}catch(e){view=null;}
+  window.view=view;
   if(!view){document.getElementById('emp').style.display='';return;}
   document.getElementById('emp').style.display='none';
   document.getElementById('gH').innerHTML=`<tr><th class="rh">Помещение</th>${view.days.map(d=>`<th>${d.date}</th>`).join('')}</tr>`;

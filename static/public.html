@@ -46,8 +46,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .hist-day{font-size:.78rem;color:var(--muted);padding-left:8px}
 .toolbar{background:var(--card);border-bottom:1px solid var(--border);padding:6px 12px;display:flex;align-items:center;gap:6px}
 .toolbar select{background:var(--bg);color:var(--text);border:1px solid var(--border);padding:4px 6px;border-radius:4px;font-size:.78rem}
+.toolbar button{padding:4px 8px;border:none;border-radius:4px;cursor:pointer;font-size:.75rem;font-weight:600}
+.btn-p{background:var(--accent);color:#000}
 .bname{font-size:.8rem;font-weight:700;color:var(--accent);margin-right:6px}
-.pub-note{font-size:.65rem;color:var(--muted);margin-left:auto}
+.pub-note{font-size:.65rem;color:var(--muted);margin-left:6px}
 </style>
 </head>
 <body>
@@ -56,6 +58,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
   <span class="bname" id="bName"></span>
   <span id="pBadge"></span>
   <select id="pSel"></select>
+  <button class="btn-p" id="btnExportPdf" onclick="openPdfModal(view)" title="Экспорт текущего периода в PDF (A4, ландшафт)" style="margin-left:auto">📄 PDF</button>
   <span class="pub-note">публичная ссылка</span>
 </div>
 
@@ -78,6 +81,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
   <div id="hBody"></div>
 </div></div>
 
+<script src="/export-pdf.js"></script>
 <script>
 var pt=new URLSearchParams(location.search).get('t');
 var bid=null,pId=null,view=null;
