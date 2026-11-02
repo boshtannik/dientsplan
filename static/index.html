@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Суперадмин — Дежурства</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0f172a;--card:#1e293b;--border:#334155;--text:#e2e8f0;--muted:#94a3b8;--accent:#38bdf8;--green:#4ade80;--red:#f87171;--orange:#fb923c;--yellow:#facc15}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.wrap{max-width:900px;margin:0 auto;padding:20px}
+h1{font-size:1.3rem;margin-bottom:20px;color:var(--accent)}
+.section{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:20px}
+.section-title{font-size:.85rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin-bottom:12px}
+.row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;overflow:hidden}
+.row:last-child{border:none}
+.row-name{flex:1;font-weight:600}
+.row-info{font-size:.78rem;color:var(--muted)}
+.btn{padding:6px 12px;border:none;border-radius:6px;cursor:pointer;font-size:.78rem;font-weight:600}
+.btn-p{background:var(--accent);color:#000}
+.btn-s{background:var(--border);color:var(--text)}
+.btn-g{background:var(--green);color:#000}
+.btn-r{background:var(--red);color:#000}
+.filters{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.filters select{background:var(--bg);color:var(--text);border:1px solid var(--border);padding:6px 10px;border-radius:6px;font-size:.82rem}
+.token-code{font-family:monospace;font-size:.78rem;color:var(--accent);background:rgba(56,189,248,.08);padding:2px 6px;border-radius:4px;word-break:break-all}
+.token-status-used{color:var(--green);font-size:.78rem;white-space:nowrap}
+.token-status-unused{color:var(--orange);font-size:.78rem;white-space:nowrap}
+.empty{color:var(--muted);text-align:center;padding:16px;font-style:italic;font-size:.85rem}
+.input-row{display:flex;gap:8px;margin-top:8px}
+.input-row input{flex:1;background:var(--bg);color:var(--text);border:1px solid var(--border);padding:6px 10px;border-radius:6px;font-size:.82rem}
+.mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;justify-content:center;align-items:center}
+.mo.on{display:flex}
+.md{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;min-width:280px;max-width:380px}
+.md h3{margin-bottom:10px;font-size:.95rem}
+.md .cb{float:right;background:none;border:none;color:var(--muted);font-size:1.1rem;cursor:pointer}
+.md label{display:block;font-size:.78rem;color:var(--muted);margin-bottom:2px}
+.md input,.md select{width:100%;background:var(--bg);color:var(--text);border:1px solid var(--border);padding:8px;border-radius:6px;font-size:.85rem;margin-bottom:8px}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <h1>Дежурства — Управление</h1>
+
+  <div class="section">
+    <div class="section-title">Здания</div>
+    <div id="buildings"></div>
+    <div class="input-row">
+      <input id="newBuildingName" placeholder="Название здания">
+      <button class="btn btn-p" onclick="createBuilding()">+ Создать</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Люди / Токены</div>
+    <div class="filters">
+      <select id="filterBuilding" onchange="loadPeople()"><option value="">Все здания</option></select>
+      <select id="filterRole" onchange="loadPeople()"><option value="">Все роли</option><option value="admin">Админ</option><option value="resident">Житель</option></select>
+    </div>
+    <div id="peopleList"></div>
+  </div>
+</div>
+
+<div class="mo" id="newPersonModal"><div class="md">
+  <button class="cb" onclick="hideModal('newPersonModal')">&times;</button>
+  <h3 id="newPersonTitle">Новый человек</h3>
+  <label>Имя (необязательно)</label><input id="npName" placeholder="Имя человека">
+  <label>Пол</label><select id="npGender"><option value="M">Мужской</option><option value="F">Женский</option></select>
+  <div style="font-size:.75rem;color:var(--muted);margin-bottom:8px">Если не заполните — при входе попросят ввести имя</div>
+  <button class="btn btn-p" onclick="confirmNewPerson()" style="width:100%">Создать</button>
+</div></div>
+
+<div class="mo" id="qrModal"><div class="md" style="text-align:center">
+  <button class="cb" onclick="hideModal('qrModal')">&times;</button>
+  <h3>QR-код</h3>
+  <div id="qrContainer" style="background:#fff;border-radius:12px;padding:12px;display:inline-block;margin:10px 0"></div>
+  <div style="font-size:.78rem;color:var(--muted);margin-top:8px">Сканируйте камерой телефона</div>
+  <div id="qrUrl" style="font-size:.68rem;color:var(--accent);margin-top:6px;word-break:break-all"></div>
+</div></div>
+
+<script src="/qrcode.min.js"></script>
+<script src="/menu.js"></script>
+<script>
+let buildings=[], dsToken=null;
+
+function getToken(){return dsToken||(dsToken=localStorage.getItem('ds_token'));}
+function waitForAuth(){return new Promise(r=>{function c(){if(window.ds_auth)r();else setTimeout(c,50);}c();});}
+async function api(u,o={}){
+  const t=getToken(),sep=u.includes('?')?'&':'?';
+  const r=await fetch(u+sep+'token='+encodeURIComponent(t),{headers:{'Content-Type':'application/json'},...o,body:o.body?JSON.stringify(o.body):undefined});
+  if(o.method==='DELETE')return null;if(!r.ok)throw new Error('API '+r.status);
+  const txt=await r.text();return txt?JSON.parse(txt):null;
+}
+function showModal(id){document.getElementById(id).classList.add('on');}
+function hideModal(id){document.getElementById(id).classList.remove('on');}
+
+async function loadBuildings(){
+  buildings=await api('/api/buildings');
+  const el=document.getElementById('buildings');
+  if(!buildings.length){el.innerHTML='<div class="empty">Нет зданий</div>';return;}
+  el.innerHTML=buildings.map(b=>
+    '<div class="row">'+
+    '<span class="row-name">'+esc(b.name)+'</span>'+
+    '<button class="btn btn-s" onclick="openAdmin('+b.id+')">Открыть</button>'+
+    '<button class="btn btn-p" onclick="openNewPersonModal('+b.id+',\'admin\')">+ Админ</button>'+
+    '<button class="btn btn-g" title="Поделиться" onclick="shareBuilding('+b.id+')">QR</button>'+
+    '</div>'
+  ).join('');
+  const sel=document.getElementById('filterBuilding');
+  const cur=sel.value;
+  sel.innerHTML='<option value="">Все здания</option>'+buildings.map(b=>'<option value="'+b.id+'">'+esc(b.name)+'</option>').join('');
+  sel.value=cur;
+}
+
+function openAdmin(bid){
+  localStorage.setItem('ds_admin_building',bid);
+  window.location.href='/admin.html';
+}
+
+let npBuildingId=null, npRole='admin';
+function openNewPersonModal(bid, role){
+  npBuildingId=bid;
+  npRole=role || 'admin';
+  document.getElementById('newPersonTitle').textContent=npRole==='admin'?'Новый админ':'Новый житель';
+  document.getElementById('npName').value='';
+  document.getElementById('npGender').value='M';
+  showModal('newPersonModal');
+}
+async function confirmNewPerson(){
+  const name=document.getElementById('npName').value.trim();
+  const gender=document.getElementById('npGender').value;
+  const body={building_id:npBuildingId,role:npRole};
+  if(name){body.name=name;body.gender=gender;}
+  const p=await api('/api/people',{method:'POST',body});
+  hideModal('newPersonModal');
+  const url=window.location.origin+'/activate.html?token='+p.token;
+  showQR(url);
+  loadPeople();
+}
+
+async function loadPeople(){
+  const all=await api('/api/people/all');
+  const bFilter=document.getElementById('filterBuilding').value;
+  const rFilter=document.getElementById('filterRole').value;
+  let people=all;
+  if(bFilter)people=people.filter(p=>p.building_id==bFilter);
+  if(rFilter)people=people.filter(p=>p.role===rFilter);
+  const el=document.getElementById('peopleList');
+  if(!people.length){el.innerHTML='<div class="empty">Нет людей</div>';return;}
+  el.innerHTML=people.map(p=>{
+    const bname=buildings.find(b=>b.id===p.building_id);
+    const bnameStr=bname?esc(bname.name):'Здание #'+p.building_id;
+    const status=p.used_at?'<span style="color:var(--green)">✓</span>':'<span style="color:var(--orange)">⏳</span>';
+    const nameStr=esc(p.name);
+    const url=window.location.origin+'/activate.html?token='+p.token;
+    return'<div class="row">'+
+    '<span class="token-code">'+p.token+'</span>'+
+    '<span class="row-info">'+bnameStr+'</span>'+
+    '<span class="row-info">'+p.role+'</span>'+
+    status+' '+nameStr+
+    '<button class="btn btn-p" style="padding:3px 8px;font-size:.7rem" onclick="showQR(\''+url+'\')">QR</button>'+
+    '<button class="btn btn-r" style="padding:3px 8px" onclick="delPerson('+p.id+')">x</button>'+
+    '</div>';
+  }).join('');
+}
+
+async function delPerson(id){
+  if(!confirm('Деактивировать?'))return;
+  await api('/api/people/'+id,{method:'DELETE'});
+  loadPeople();
+}
+
+async function shareBuilding(bid){
+  const s=await api('/api/buildings/'+bid+'/share');
+  const url=window.location.origin+'/public.html?t='+s.token;
+  showQR(url);
+}
+
+async function createBuilding(){
+  const name=document.getElementById('newBuildingName').value.trim();
+  if(!name)return;
+  await api('/api/buildings',{method:'POST',body:{name}});
+  document.getElementById('newBuildingName').value='';
+  loadBuildings();
+}
+
+function showQR(url){
+  document.getElementById('qrUrl').textContent=url;
+  const c=document.getElementById('qrContainer');c.innerHTML='';
+  try{
+    const q=qrcode(0,'M');q.addData(url);q.make();
+    const img=q.createImgTag(6,4);
+    c.innerHTML=img.replace('<img ','<img style="max-width:200px;height:auto;" ');
+  }catch(e){c.innerHTML='<div style="color:#666">QR Error</div>';}
+  showModal('qrModal');
+}
+
+function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
+
+(async()=>{
+  await waitForAuth();
+  if(!window.ds_auth)return;
+  await loadBuildings();
+  await loadPeople();
+})();
+</script>
+</body>
+</html>

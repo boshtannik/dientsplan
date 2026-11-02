@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Админ — Дежурства</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0f172a;--card:#1e293b;--border:#334155;--text:#e2e8f0;--muted:#94a3b8;--accent:#38bdf8;--green:#4ade80;--red:#f87171;--orange:#fb923c;--purple:#a78bfa;--pink:#f472b6;--cyan:#22d3ee;--yellow:#facc15}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.toolbar{background:var(--card);border-bottom:1px solid var(--border);padding:6px 12px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.toolbar select{background:var(--bg);color:var(--text);border:1px solid var(--border);padding:4px 6px;border-radius:4px;font-size:.78rem}
+.toolbar button{padding:4px 8px;border:none;border-radius:4px;cursor:pointer;font-size:.75rem;font-weight:600}
+.btn-p{background:var(--accent);color:#000}
+.btn-s{background:var(--border);color:var(--text)}
+.btn-g{background:var(--green);color:#000}
+.btn-r{background:var(--red);color:#000}
+.btn-o{background:var(--orange);color:#000}
+.sep-v{width:1px;height:16px;background:var(--border)}
+.wrap{display:grid;grid-template-columns:1fr 280px;min-height:calc(100vh - 40px)}
+@media(max-width:900px){.wrap{grid-template-columns:1fr}.side{border-left:none;border-top:1px solid var(--border)}}
+.pnl{padding:14px;overflow-x:auto}
+.side{background:var(--card);border-left:1px solid var(--border);padding:14px;overflow-y:auto;overflow-x:hidden;max-height:calc(100vh - 40px)}
+.stitle{font-size:.8rem;font-weight:700;margin-bottom:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+.grid{border-collapse:collapse;width:100%;min-width:500px}
+.grid th,.grid td{border:1px solid var(--border);padding:4px 5px;text-align:center;vertical-align:top}
+.grid th{background:var(--card);color:var(--muted);font-size:.72rem;font-weight:600;position:sticky;top:0;z-index:1}
+.grid th.rh{text-align:left;min-width:100px;color:var(--text);font-size:.8rem}
+.grid td.dc{min-width:72px;height:42px;cursor:pointer;transition:background .12s}
+.grid td.dc:hover{background:rgba(56,189,248,.08)}
+.grid tr:hover td{background:rgba(56,189,248,.03)}
+.chip{display:inline-flex;align-items:center;gap:2px;padding:2px 6px;border-radius:9px;font-size:.72rem;font-weight:600;margin:1px;cursor:pointer;transition:transform .1s}
+.chip:hover{transform:scale(1.1)}
+.chip-m{background:rgba(56,189,248,.15);color:var(--accent);border:1px solid rgba(56,189,248,.3)}
+.chip-f{background:rgba(244,114,182,.15);color:var(--pink);border:1px solid rgba(244,114,182,.3)}
+.chip-r{background:rgba(74,222,128,.15);color:var(--green);border:1px solid rgba(74,222,128,.3)}
+.chip-x{background:rgba(248,113,113,.15);color:var(--red);border:1px solid rgba(248,113,113,.3)}
+.chip .x{font-size:.62rem;opacity:.5}
+.srow{display:flex;align-items:center;gap:5px;padding:4px 0;border-bottom:1px solid var(--border)}
+.srow:last-child{border:none}
+.sname{flex:1;font-size:.82rem;display:flex;align-items:center;gap:3px}
+.sbarw{flex:2;height:16px;background:var(--bg);border-radius:8px;overflow:hidden}
+.sbar{height:100%;border-radius:8px;transition:width .3s;display:flex;align-items:center;justify-content:flex-end;padding-right:4px;font-size:.65rem;font-weight:700;color:#000}
+.scnt{min-width:22px;text-align:right;font-weight:700;font-size:.85rem}
+.gb{display:inline-block;width:6px;height:6px;border-radius:50%}
+.gb.m{background:var(--accent)}.gb.f{background:var(--pink)}
+.plist{display:flex;flex-direction:column;gap:2px;margin-bottom:8px}
+.pitem{display:flex;align-items:center;gap:5px;padding:4px 6px;border-radius:4px;background:var(--bg);font-size:.8rem;cursor:pointer;transition:background .1s}
+.pitem:hover{background:rgba(56,189,248,.08)}
+.pitem .pn{flex:1}
+.pitem button{border:none;background:none;color:var(--red);cursor:pointer;font-size:.8rem;padding:2px}
+.aform{display:flex;gap:3px;margin-bottom:8px;flex-wrap:wrap}
+.aform input,.aform select{background:var(--bg);color:var(--text);border:1px solid var(--border);padding:4px 6px;border-radius:4px;font-size:.8rem}
+.aform input{flex:1;min-width:50px}
+.mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;justify-content:center;align-items:center}
+.mo.on{display:flex}
+.md{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;min-width:280px;max-width:420px;max-height:80vh;overflow-y:auto}
+.md h3{margin-bottom:8px;font-size:.92rem}
+.md .pg{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px}
+.md .pb{padding:5px 9px;border:2px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);cursor:pointer;font-size:.8rem;transition:all .12s}
+.md .pb:hover{border-color:var(--accent);background:rgba(56,189,248,.1)}
+.md .pb.sel{border-color:var(--accent);background:rgba(56,189,248,.2)}
+.md .pb.dis{opacity:.3;cursor:not-allowed}
+.prow{display:flex;align-items:center;gap:4px;margin:2px 0}
+.prow .pb{flex:1;margin:0}
+.fb{font-size:.65rem;padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--muted);cursor:pointer;white-space:nowrap}
+.fb:hover{border-color:var(--accent);color:var(--accent);background:rgba(56,189,248,.1)}
+.md .cb{float:right;background:none;border:none;color:var(--muted);font-size:1.1rem;cursor:pointer}
+.md label{display:block;font-size:.78rem;color:var(--muted);margin-bottom:2px}
+.md input,.md select{width:100%;background:var(--bg);color:var(--text);border:1px solid var(--border);padding:6px;border-radius:5px;font-size:.82rem;margin-bottom:6px}
+.empty{color:var(--muted);font-style:italic;text-align:center;padding:14px;font-size:.82rem}
+.unful{margin-top:10px;padding:8px;border-radius:6px;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2)}
+.unful h4{font-size:.8rem;color:var(--red);margin-bottom:4px}
+.unful-item{font-size:.78rem;color:var(--muted);padding:2px 0}
+.abs-badge{font-size:.6rem;padding:1px 4px;border-radius:4px;background:rgba(248,113,113,.2);color:var(--red);margin-left:3px}
+.hist-item{padding:6px 0;border-bottom:1px solid var(--border)}
+.hist-item:last-child{border:none}
+.hist-period{font-weight:600;font-size:.85rem;margin-bottom:3px}
+.hist-day{font-size:.78rem;color:var(--muted);padding-left:8px}
+.period-badge{font-size:.65rem;padding:2px 6px;border-radius:4px;font-weight:700;margin-left:4px}
+.period-badge.not-started{background:rgba(74,222,128,.15);color:var(--green)}
+.period-badge.active{background:rgba(250,204,21,.15);color:var(--yellow)}
+.period-badge.finished{background:rgba(148,163,184,.15);color:var(--muted)}
+.token-code{font-family:monospace;font-size:.72rem;color:var(--accent);word-break:break-all}
+.role-badge{font-size:.65rem;padding:1px 4px;border-radius:3px;font-weight:700}
+.role-badge.admin{background:rgba(56,189,248,.15);color:var(--accent)}
+.role-badge.resident{background:rgba(74,222,128,.15);color:var(--green)}
+</style>
+</head>
+<body>
+
+<div class="toolbar" id="toolbar">
+  <span id="pBadge"></span>
+  <select id="pSel"></select>
+  <div class="sep-v"></div>
+  <button class="btn-p" onclick="openNewPeriodModal()">+ Период</button>
+  <button class="btn-g" onclick="nextPeriod()">След.</button>
+  <button class="btn-p" onclick="autoFill()">Заполнить</button>
+  <button class="btn-s" id="btnEditPeriod" onclick="editPeriod()" style="display:none">✎</button>
+  <button class="btn-r" id="btnDelPeriod" onclick="delPeriod()" style="display:none">X</button>
+</div>
+
+<div class="wrap">
+  <div class="pnl">
+    <div style="overflow-x:auto">
+      <table class="grid"><thead id="gH"></thead><tbody id="gB"></tbody></table>
+    </div>
+    <div class="empty" id="emp">Создайте период или выберите существующий</div>
+    <div class="unful" id="unf" style="display:none"><h4>Незамещённые дежурства</h4><div id="unfL"></div></div>
+  </div>
+  <div class="side" id="side">
+    <div style="margin-bottom:14px">
+      <div class="stitle">Очередь на дежурство</div>
+      <div id="rank"></div>
+    </div>
+    <div style="margin-bottom:14px">
+      <div class="stitle">Люди</div>
+      <div class="aform">
+        <input id="nP" placeholder="Имя">
+        <select id="nG"><option value="M">М</option><option value="F">Ж</option></select>
+        <button class="btn-p" onclick="addPerson()" style="flex:none">+</button>
+      </div>
+      <div class="plist" id="pL"></div>
+    </div>
+    <div style="margin-bottom:14px">
+      <div class="stitle">Помещения</div>
+      <div class="aform">
+        <input id="nRK" placeholder="Ключ" style="flex:0.5">
+        <input id="nRN" placeholder="Название">
+        <input id="nRR" type="number" min="1" value="1" style="flex:0.4">
+        <select id="nRG"><option value="">Любой</option><option value="M">М</option><option value="F">Ж</option></select>
+        <button class="btn-p" onclick="addRoom()" style="flex:none">+</button>
+      </div>
+      <div class="plist" id="rL"></div>
+    </div>
+    <div style="margin-bottom:14px">
+      <div class="stitle">Отсутствия</div>
+      <button class="btn-s" onclick="showAbsenceModal()" style="width:100%;margin-bottom:6px">+ Отсутствие</button>
+      <div class="plist" id="absL"></div>
+    </div>
+    <div>
+      <div class="stitle">Токены</div>
+      <div class="aform">
+        <button class="btn-p" onclick="openNewPersonModal('admin')" style="flex:1">+ Админ</button>
+        <button class="btn-s" onclick="openNewPersonModal('resident')" style="flex:1">+ Житель</button>
+      </div>
+      <div class="plist" id="tokL"></div>
+    </div>
+  </div>
+</div>
+
+<div class="mo" id="aModal"><div class="md">
+  <button class="cb" onclick="hideModal('aModal')">&times;</button>
+  <h3 id="aTitle">Назначить</h3>
+  <div class="pg" id="aPeople"></div>
+  <div class="pg">
+    <button class="fb" onclick="clearCell()" title="Убрать всех с этого дня"/>Очистить клетку</button>
+    <button class="fb" onclick="clearWeek()" title="Убрать всех на всю неделю"/>Очистить неделю</button>
+  </div>
+</div></div>
+
+<div class="mo" id="pModal"><div class="md">
+  <button class="cb" onclick="hideModal('pModal')">&times;</button>
+  <h3>Новый период</h3>
+  <label>Название</label><input id="pName" placeholder="Неделя 1">
+  <label>Дата начала</label><input id="pStart" type="date">
+  <label>Дней</label><input id="pDays" type="number" min="1" max="30" value="7">
+  <button class="btn-p" onclick="createPeriod()" style="width:100%">Создать</button>
+</div></div>
+
+<div class="mo" id="hModal"><div class="md">
+  <button class="cb" onclick="hideModal('hModal')">&times;</button>
+  <h3 id="hTitle">История</h3>
+  <div id="hBody"></div>
+</div></div>
+
+<div class="mo" id="abModal"><div class="md">
+  <button class="cb" onclick="hideModal('abModal')">&times;</button>
+  <h3>Отсутствие</h3>
+  <label>Человек</label><select id="abWho"></select>
+  <label>С</label><input id="abFrom" type="date">
+  <label>Дней</label><input id="abDays" type="number" min="1" value="1">
+  <label>Причина</label><select id="abWhy"><option value="sick">Болеет</option><option value="absent">Отсутствует</option><option value="vacation">Отпуск</option><option value="other">Прочее</option></select>
+  <button class="btn-r" onclick="createAbsence()" style="width:100%">Пометить</button>
+</div></div>
+
+<div class="mo" id="qrModal"><div class="md" style="text-align:center">
+  <button class="cb" onclick="hideModal('qrModal')">&times;</button>
+  <h3>QR-код</h3>
+  <div id="qrContainer" style="background:#fff;border-radius:12px;padding:12px;display:inline-block;margin:10px 0"></div>
+  <div style="font-size:.78rem;color:var(--muted);margin-top:8px">Сканируйте камерой телефона</div>
+  <div id="qrUrl" style="font-size:.68rem;color:var(--accent);margin-top:6px;word-break:break-all"></div>
+</div></div>
+
+<div class="mo" id="newPersonModal"><div class="md">
+  <button class="cb" onclick="hideModal('newPersonModal')">&times;</button>
+  <h3 id="newPersonTitle">Новый человек</h3>
+  <label>Имя (необязательно)</label><input id="npTokenName" placeholder="Имя человека">
+  <label>Пол</label><select id="npTokenGender"><option value="M">Мужской</option><option value="F">Женский</option></select>
+  <div style="font-size:.75rem;color:var(--muted);margin-bottom:8px">Если не заполните — при входе попросят ввести имя</div>
+  <button class="btn btn-p" onclick="confirmNewPersonToken()" style="width:100%">Создать</button>
+</div></div>
+
+<script src="/qrcode.min.js"></script>
+<script src="/menu.js"></script>
+<script>
+let bId=null,pId=null,view=null,people=[],dsToken=null;
+
+function getToken(){
+  if(dsToken) return dsToken;
+  dsToken=localStorage.getItem('ds_token');
+  return dsToken;
+}
+
+function waitForAuth(){return new Promise(function(res){function check(){if(window.ds_auth){res();}else{setTimeout(check,50);}}check();});}
+
+async function api(u,o={}){
+  const token=getToken();const sep=u.includes('?')?'&':'?';
+  const r=await fetch(u+sep+'token='+encodeURIComponent(token),{headers:{'Content-Type':'application/json'},...o,body:o.body?JSON.stringify(o.body):undefined});
+  if(o.method==='DELETE'||r.status===204)return null;
+  if(!r.ok){const t=await r.text().catch(()=>'');throw new Error(t||('API '+r.status));}
+  const t=await r.text();return t?JSON.parse(t):null;
+}
+function showModal(id){document.getElementById(id).classList.add('on');}
+function hideModal(id){document.getElementById(id).classList.remove('on');}
+
+function getPeriodStatus(period){
+  const today=todayStr();
+  if(period.start_date>today) return 'not-started';
+  const end=addDays(period.start_date,period.num_days);
+  if(end<=today) return 'finished';
+  return 'active';
+}
+
+async function openNewPeriodModal(){
+  const ps=await api(`/api/periods?building_id=${bId}`);
+  let nextDate='';
+  if(ps.length){
+    let maxEnd='';
+    for(const p of ps){
+      const end=addDays(p.start_date,p.num_days);
+      if(end>maxEnd)maxEnd=end;
+    }
+    nextDate=maxEnd;
+  }else{nextDate=todayStr();}
+  document.getElementById('pStart').value=nextDate;document.getElementById('pDays').value='7';
+  updatePeriodName();showModal('pModal');
+}
+function todayStr(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function addDays(dateStr,n){const p=dateStr.split('-').map(Number);let y=p[0],m=p[1],d=p[2]+n;while(d>daysInMonth(y,m)){d-=daysInMonth(y,m);m++;if(m>12){m=1;y++;}}return y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0');}
+function daysInMonth(y,m){return new Date(y,m,0).getDate();}
+function updatePeriodName(){
+  const s=document.getElementById('pStart').value;const days=parseInt(document.getElementById('pDays').value)||7;
+  if(!s)return;const sd=new Date(s+'T00:00:00');const ed=new Date(sd);ed.setDate(ed.getDate()+days-1);
+  const f=d=>String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0');
+  document.getElementById('pName').value=f(sd)+' — '+f(ed);
+}
+document.getElementById('pStart').addEventListener('change',updatePeriodName);
+document.getElementById('pDays').addEventListener('input',updatePeriodName);
+
+async function loadPeriods(){
+  if(!bId)return;
+  const ps=await api(`/api/periods?building_id=${bId}`);
+  const sel=document.getElementById('pSel');
+  sel.innerHTML=ps.length?ps.map(p=>`<option value="${p.id}">${p.name} (${p.num_days}д)</option>`).join(''):'<option value="">Нет периодов</option>';
+  const cur=ps.find(p=>p.is_current);
+  if(cur){pId=cur.id;sel.value=cur.id;}
+  else if(ps.length){pId=ps[0].id;sel.value=pId;await api(`/api/periods/${pId}/set-current`,{method:'POST'});}
+  else pId=null;
+  updatePeriodButtons(ps);
+  if(pId&&bId)await loadView();
+  else{document.getElementById('emp').style.display='';document.getElementById('gH').innerHTML='';document.getElementById('gB').innerHTML='';}
+}
+document.getElementById('pSel').addEventListener('change',async e=>{pId=+e.target.value;if(pId){await api(`/api/periods/${pId}/set-current`,{method:'POST'});await loadPeriods();}});
+
+function updatePeriodButtons(ps){
+  const p=ps.find(x=>x.id===pId);const badge=document.getElementById('pBadge');
+  const btnEdit=document.getElementById('btnEditPeriod');const btnDel=document.getElementById('btnDelPeriod');
+  if(!p){badge.innerHTML='';btnEdit.style.display='none';btnDel.style.display='none';return;}
+  const st=getPeriodStatus(p);const labels={'not-started':'Не начался','active':'Идёт','finished':'Завершён'};
+  badge.innerHTML=`<span class="period-badge ${st}">${labels[st]}</span>`;
+  btnEdit.style.display=(st!=='finished')?'':'none';
+  btnDel.style.display=(st==='not-started')?'':'none';
+}
+
+async function loadView(){
+  if(!pId||!bId)return;
+  try{view=await api(`/api/periods/${pId}/view?building_id=${bId}`);}catch(e){view=null;}
+  if(!view){document.getElementById('emp').style.display='';return;}
+  document.getElementById('emp').style.display='none';
+  document.getElementById('gH').innerHTML=`<tr><th class="rh">Помещение</th>${view.days.map(d=>`<th>${d.date}</th>`).join('')}</tr>`;
+  const b=document.getElementById('gB');b.innerHTML='';
+  const absentIds=view.absences.map(a=>a.person_id);
+  for(const room of view.rooms){
+    const tr=document.createElement('tr');
+    const gl=room.gender==='M'?'М':room.gender==='F'?'Ж':'';
+    tr.innerHTML=`<td class="rh" style="white-space:nowrap"><span style="color:var(--${room.gender==='F'?'pink':'accent'})">●</span> ${room.name} <span style="color:var(--muted);font-size:.7rem">(${room.required}${gl})</span></td>`;
+    for(const day of view.days){
+      const td=document.createElement('td');td.className='dc';
+      td.onclick=()=>openAssign(room,day.day);
+      const ra=day.assignments.filter(a=>a.room_id===room.id);
+      for(const a of ra){
+        const isAbs=absentIds.includes(a.person_id);
+        const gc=isAbs?'chip-x':(a.person_gender==='F'||getG(a.person_id)==='F'?'chip-f':'chip-m');
+        const chip=document.createElement('span');chip.className=`chip ${gc}`;
+        chip.innerHTML=`${a.person_name}${isAbs?'<span class="abs-badge">!</span>':''} <span class="x" onclick="event.stopPropagation();rmAssign(${a.person_id},${room.id},${day.day})">×</span>`;
+        td.appendChild(chip);
+      }
+      tr.appendChild(td);
+    }
+    b.appendChild(tr);
+  }
+  renderRank();renderUnfulfilled();
+}
+
+function getG(pid){const p=people.find(x=>x.id===pid);return p?p.gender:'M';}
+
+function renderRank(){
+  if(!view)return;const el=document.getElementById('rank');
+  const ps=view.person_stats;if(!ps||!ps.length){el.innerHTML='<div class="empty">Нет людей</div>';return;}
+  const mx=Math.max(...ps.map(s=>s.total_duties),1);
+  el.innerHTML=ps.map(s=>{
+    const pct=(s.total_duties/mx*100).toFixed(0);
+    return`<div class="srow"><span class="sname"><span class="gb ${s.person.gender.toLowerCase()}"></span>${s.person.name}</span><div class="sbarw"><div class="sbar" style="width:${pct}%;background:var(--green)">${s.total_duties}</div></div><span class="scnt">${s.total_duties}</span></div>`;
+  }).join('');
+}
+
+function renderUnfulfilled(){
+  const uf=view?view.unfulfilled:[];const el=document.getElementById('unf');
+  if(!uf.length){el.style.display='none';return;}el.style.display='';
+  document.getElementById('unfL').innerHTML=uf.map(u=>`<div class="unful-item">* ${u.room_name}, ${u.date} — ${u.reason}</div>`).join('');
+}
+
+async function loadPeople(){
+  if(!bId)return;
+  people=await api(`/api/people?building_id=${bId}`);
+  document.getElementById('pL').innerHTML=people.filter(p=>p.role!=='superadmin').map(p=>
+    `<div class="pitem" onclick="showHistory(${p.id})"><span class="gb ${p.gender.toLowerCase()}"></span><span class="pn">${escHtml(p.name)}</span><span class="role-badge ${p.role}">${p.role}</span><button onclick="event.stopPropagation();delPerson(${p.id})" title="Уехать">x</button></div>`
+  ).join('');
+}
+
+async function addPerson(){
+  const name=document.getElementById('nP').value.trim();if(!name)return;
+  const gender=document.getElementById('nG').value;
+  await api('/api/people',{method:'POST',body:{name,gender,building_id:bId,role:'resident'}});
+  document.getElementById('nP').value='';
+  await loadPeople();await loadTokens();if(pId&&bId)loadView();
+}
+async function delPerson(id){if(!confirm('Человек уезжает?'))return;await api(`/api/people/${id}`,{method:'DELETE'});await loadPeople();await loadTokens();if(pId&&bId)loadView();}
+async function promotePerson(id){if(!confirm('Сделать админом? Текущий админ станет жителем.'))return;await api(`/api/people/${id}`,{method:'PUT',body:{role:'admin'}});await loadPeople();await loadTokens();}
+
+async function loadRooms(){
+  if(!bId)return;
+  const rs=await api(`/api/buildings/${bId}/rooms`);
+  document.getElementById('rL').innerHTML=rs.map(r=>
+    `<div class="pitem"><span style="color:var(--${r.gender==='F'?'pink':'accent'})">●</span><span class="pn">${escHtml(r.name)}</span><span style="color:var(--muted);font-size:.75rem">${r.required}${r.gender?' '+r.gender:''}</span><button onclick="event.stopPropagation();editRoom(${r.id},'${r.key.replace(/'/g,"\\'")}','${r.name.replace(/'/g,"\\'")}',${r.required},'${r.gender}')" title="Ред.">✎</button><button onclick="event.stopPropagation();delRoom(${r.id})" title="Удалить">x</button></div>`
+  ).join('');
+}
+async function addRoom(){
+  const key=document.getElementById('nRK').value.trim().toLowerCase().replace(/\s+/g,'_');
+  const name=document.getElementById('nRN').value.trim();
+  const required=parseInt(document.getElementById('nRR').value)||1;
+  const gender=document.getElementById('nRG').value;
+  if(!key||!name)return;
+  await api(`/api/buildings/${bId}/rooms`,{method:'POST',body:{key,name,required,gender}});
+  ['nRK','nRN'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('nRR').value='1';document.getElementById('nRG').value='';
+  await loadRooms();if(pId&&bId)loadView();
+}
+async function editRoom(id,key,name,required,gender){
+  const newKey=prompt('Ключ:',key);if(newKey===null)return;
+  const newName=prompt('Название:',name);if(newName===null)return;
+  const newReq=parseInt(prompt('Человек:',required))||1;
+  const newGen=prompt('Пол (M/F/пусто):',gender);
+  await api(`/api/rooms/${id}`,{method:'PUT',body:{key:newKey.trim(),name:newName.trim(),required:newReq,gender:newGen||''}});
+  await loadRooms();if(pId&&bId)loadView();
+}
+async function delRoom(id){if(!confirm('Удалить помещение?'))return;await api(`/api/rooms/${id}`,{method:'DELETE'});await loadRooms();if(pId&&bId)loadView();}
+
+let pRoom=null,pDay=null;
+function openAssign(room,day){
+  pRoom=room;pDay=day;
+  document.getElementById('aTitle').textContent=room.name+' — Д'+(day+1);
+  const dv=view.days.find(d=>d.day===day);
+  const ex=dv?dv.assignments.filter(a=>a.room_id===room.id).map(a=>a.person_id):[];
+  const full=ex.length>=room.required;
+  const absIds=view.absences.map(a=>a.person_id);
+  const suit=people.filter(p=>!room.gender||p.gender===room.gender);
+  document.getElementById('aPeople').innerHTML=suit.length===0?'<div class="empty">Нет подходящих</div>':
+    suit.map(p=>{
+      const al=ex.includes(p.id);const isAbs=absIds.includes(p.id);
+      const cls=full&&!al?'dis':al?'sel':'';
+      return`<div class="prow"><button class="pb ${cls}" ${full&&!al||isAbs?'disabled':''} onclick="selPerson(${p.id})"><span class="gb ${p.gender.toLowerCase()}"></span>${escHtml(p.name)}${al?' ✓':''}${isAbs?' !':''}</button><button class="fb" onclick="fillPeriod(${p.id})" title="На весь период">На весь период</button><button class="fb" onclick="fillFromDay(${p.id})" title="С этого дня до конца">До конца</button></div>`;
+    }).join('');
+  showModal('aModal');
+}
+async function selPerson(pid){
+  if(!pRoom||!pId)return;
+  await api(`/api/periods/${pId}/assignments`,{method:'POST',body:{person_id:pid,room_id:pRoom.id,day:pDay}});
+  await loadView();openAssign(pRoom,pDay);
+}
+async function rmAssign(pid,rid,day){
+  if(!pId)return;
+  await api(`/api/periods/${pId}/assignments`,{method:'DELETE',body:{person_id:pid,room_id:rid,day}});
+  await loadView();
+}
+async function fillPeriod(pid){
+  if(!pRoom||!pId)return;
+  await api(`/api/periods/${pId}/fill`,{method:'POST',body:{person_id:pid,room_id:pRoom.id,from_day:null}});
+  await loadView();hideModal('aModal');
+}
+async function fillFromDay(pid){
+  if(!pRoom||!pId)return;
+  await api(`/api/periods/${pId}/fill`,{method:'POST',body:{person_id:pid,room_id:pRoom.id,from_day:pDay}});
+  await loadView();hideModal('aModal');
+}
+async function clearCell(){
+  if(!pRoom||!pId)return;
+  if(!confirm(`Очистить ${pRoom.name} — Д'${pDay+1}?`))return;
+  await api(`/api/periods/${pId}/clear`,{method:'POST',body:{room_id:pRoom.id,day:pDay}});
+  await loadView();hideModal('aModal');
+}
+async function clearWeek(){
+  if(!pRoom||!pId)return;
+  if(!confirm(`Очистить ${pRoom.name} на всю неделю?`))return;
+  await api(`/api/periods/${pId}/clear`,{method:'POST',body:{room_id:pRoom.id,day:null}});
+  await loadView();hideModal('aModal');
+}
+
+async function createPeriod(){
+  const name=document.getElementById('pName').value.trim();
+  const start=document.getElementById('pStart').value;
+  const days=parseInt(document.getElementById('pDays').value)||7;
+  if(!name||!start)return;
+  try{
+    const p=await api('/api/periods',{method:'POST',body:{name,start_date:start,num_days:days,building_id:bId}});
+    await api(`/api/periods/${p.id}/set-current`,{method:'POST'});
+    hideModal('pModal');document.getElementById('pName').value='';document.getElementById('pStart').value='';document.getElementById('pDays').value='7';
+    pId=p.id;await loadPeriods();
+  }catch(e){alert('Ошибка: '+e.message);}
+}
+async function nextPeriod(){const p=await api(`/api/periods/next?building_id=${bId}`,{method:'POST'});pId=p.id;await loadPeriods();}
+async function autoFill(){
+  if(!pId||!bId)return;
+  const n=await api(`/api/periods/${pId}/auto-fill?building_id=${bId}`,{method:'POST'});
+  alert('Заполнено '+n+' назначений');await loadView();
+}
+
+async function editPeriod(){
+  if(!pId)return;
+  const name=prompt('Название:',view?.period?.name||'');if(name===null)return;
+  const start=prompt('Дата начала (YYYY-MM-DD):',view?.period?.start_date||'');if(start===null)return;
+  const days=parseInt(prompt('Дней:',view?.period?.num_days||7))||7;
+  try{await api(`/api/periods/${pId}`,{method:'PUT',body:{name,start_date:start,num_days:days}});await loadPeriods();}
+  catch(e){alert('Ошибка: '+e.message);}
+}
+async function delPeriod(){
+  if(!pId)return;if(!confirm('Удалить период?'))return;
+  try{await api(`/api/periods/${pId}`,{method:'DELETE'});pId=null;await loadPeriods();}
+  catch(e){alert('Ошибка: '+e.message);}
+}
+
+async function loadAbsences(){
+  if(!bId)return;
+  const abs=await api(`/api/absences?building_id=${bId}`);
+  document.getElementById('absL').innerHTML=abs.length?abs.map(a=>
+    `<div class="pitem"><span class="pn" style="flex:1;font-size:.75rem"><b>${escHtml(a.person_name)}</b> ${a.start_date} — ${a.end_date}<br><span style="color:var(--muted)">${a.reason}</span></span><button onclick="event.stopPropagation();delAbsence(${a.id})" title="Удалить">x</button></div>`
+  ).join(''):'<div class="empty">Нет отсутствий</div>';
+}
+function showAbsenceModal(){
+  const sel=document.getElementById('abWho');
+  sel.innerHTML=people.filter(p=>p.role!=='superadmin').map(p=>`<option value="${p.id}">${escHtml(p.name)} (${p.gender})</option>`).join('');
+  document.getElementById('abFrom').value=todayStr();
+  document.getElementById('abDays').value='1';
+  showModal('abModal');
+}
+async function createAbsence(){
+  const pid=+document.getElementById('abWho').value;
+  const start=document.getElementById('abFrom').value;
+  const days=parseInt(document.getElementById('abDays').value)||1;
+  const end=addDays(start,days-1);
+  const reason=document.getElementById('abWhy').value;
+  if(!pid||!start)return;
+  await api('/api/absences',{method:'POST',body:{person_id:pid,start_date:start,end_date:end,reason}});
+  hideModal('abModal');await loadAbsences();if(pId&&bId)loadView();
+}
+async function delAbsence(id){if(!confirm('Удалить отсутствие?'))return;await api(`/api/absences/${id}`,{method:'DELETE'});await loadAbsences();if(pId&&bId)loadView();}
+
+async function showHistory(pid){
+  const h=await api(`/api/people/${pid}/history`);
+  document.getElementById('hTitle').textContent=h.person.name;
+  let html='<div style="margin-bottom:8px"><span class="gb '+h.person.gender.toLowerCase()+'"></span> '+escHtml(h.person.name)+' — <b>'+h.periods.reduce((s,p)=>s+p.assignments.length,0)+'</b> дежурств</div>';
+  for(const ph of h.periods){
+    html+='<div class="hist-item"><div class="hist-period">'+escHtml(ph.period.name)+' ('+ph.period.start_date+', '+ph.period.num_days+'д)</div>';
+    for(const a of ph.assignments){html+='<div class="hist-day">Д'+(a.day+1)+' — '+escHtml(a.room_name)+'</div>';}
+    html+='</div>';
+  }
+  document.getElementById('hBody').innerHTML=html;showModal('hModal');
+}
+
+function escHtml(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+
+let npTokenRole='admin';
+function openNewPersonModal(role){
+  npTokenRole=role;
+  document.getElementById('newPersonTitle').textContent=role==='admin'?'Новый админ':'Новый житель';
+  document.getElementById('npTokenName').value='';
+  document.getElementById('npTokenGender').value='M';
+  showModal('newPersonModal');
+}
+async function confirmNewPersonToken(){
+  const name=document.getElementById('npTokenName').value.trim();
+  const gender=document.getElementById('npTokenGender').value;
+  const body={building_id:bId,role:npTokenRole};
+  if(name){body.name=name;body.gender=gender;}
+  const p=await api('/api/people',{method:'POST',body});
+  hideModal('newPersonModal');
+  const url=window.location.origin+'/activate.html?token='+p.token;
+  showQR(url);
+  await loadPeople();await loadTokens();
+}
+
+async function loadTokens(){
+  if(!bId)return;
+  try{
+    const tokens=await api(`/api/people?building_id=${bId}`);
+    const tokPeople=tokens.filter(p=>p.token);
+    document.getElementById('tokL').innerHTML=tokPeople.length?tokPeople.map(p=>{
+      const status=p.used_at?'<span style="color:var(--green)">✓</span>':'<span style="color:var(--orange)">⏳</span>';
+      const nameStr=escHtml(p.name);
+      const url=window.location.origin+'/activate.html?token='+p.token;
+      return'<div class="pitem" style="flex-direction:column;align-items:stretch;gap:3px;overflow:hidden">'+
+        '<div style="display:flex;align-items:center;gap:5px;min-width:0;flex-wrap:wrap">'+
+        '<span class="token-code" style="min-width:0">'+p.token+'</span>'+
+        '<span class="role-badge '+p.role+'">'+p.role+'</span>'+
+        status+' '+nameStr+
+        '<button onclick="event.stopPropagation();delToken('+p.id+')" title="Деактивировать" style="margin-left:auto;border:none;background:none;color:var(--red);cursor:pointer">x</button>'+
+        '</div>'+
+        '<div style="display:flex;gap:4px;align-items:center">'+
+        '<button class="btn-p" style="font-size:.68rem;padding:2px 8px" onclick="showQR(\''+url+'\')">QR</button>'+
+        '<a href="'+url+'" target="_blank" style="font-size:.68rem;color:var(--accent)">Открыть</a>'+
+        (p.role==='resident'?'<button class="btn-s" style="font-size:.68rem;padding:2px 8px" onclick="promotePerson('+p.id+')">Сделать админом</button>':'')+
+        '</div></div>';
+    }).join(''):'<div class="empty">Нет токенов</div>';
+  }catch(e){}
+}
+async function delToken(id){if(!confirm('Деактивировать токен?'))return;await api('/api/people/'+id,{method:'DELETE'});await loadTokens();await loadPeople();}
+
+function showQR(url){
+  document.getElementById('qrUrl').textContent=url;
+  const c=document.getElementById('qrContainer');c.innerHTML='';
+  try{
+    const q=qrcode(0,'M');q.addData(url);q.make();
+    const img=q.createImgTag(6,4);
+    c.innerHTML=img.replace('<img ','<img style="max-width:200px;height:auto;" ');
+  }catch(e){c.innerHTML='<div style="color:#666">QR Error</div>';}
+  showModal('qrModal');
+}
+
+document.addEventListener('keydown',e=>{if(e.key==='Escape')['aModal','pModal','hModal','abModal','qrModal','newPersonModal'].forEach(hideModal);});
+
+(async()=>{
+  await waitForAuth();
+  const auth=window.ds_auth;
+  if(!auth){window.location.href='/activate.html';return;}
+  if(auth.role==='resident'){window.location.href='/view.html';return;}
+  bId=auth.building_id;
+  await loadPeriods();
+  await loadPeople();
+  await loadRooms();
+  await loadAbsences();
+  await loadTokens();
+})();
+</script>
+</body>
+</html>

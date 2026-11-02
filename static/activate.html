@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Дежурства — Вход</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f5;color:#333}
+.container{max-width:400px;margin:80px auto;padding:20px}
+h1{text-align:center;margin-bottom:20px;font-size:1.5em}
+.card{background:#fff;border-radius:12px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.field{margin-bottom:12px}
+label{display:block;margin-bottom:4px;font-size:.85em;color:#666}
+input,select{width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:1em}
+button{width:100%;padding:12px;background:#556cd6;color:#fff;border:none;border-radius:8px;font-size:1em;cursor:pointer;margin-top:8px}
+button:hover{background:#4458b8}
+button:disabled{background:#ccc;cursor:not-allowed}
+.error{color:#e53e3e;text-align:center;margin-top:12px;font-size:.9em;display:none}
+.success{color:#38a169;text-align:center;margin-top:12px;font-size:.9em;display:none}
+.hidden{display:none}
+.token-info{background:#f0f4ff;border-radius:8px;padding:12px;margin-bottom:14px;text-align:center}
+.token-info .building{font-weight:700;font-size:1.1em;color:#556cd6}
+.token-info .role{font-size:.85em;color:#666;margin-top:4px}
+.token-info .role.admin{color:#556cd6}
+.token-info .role.resident{color:#e53e3e}
+</style>
+</head>
+<body>
+<div class="container">
+    <h1>Дежурства в Лоджии</h1>
+    <div class="card">
+        <div id="form-token">
+            <div class="field" id="tokenField">
+                <label for="token">Токен</label>
+                <input type="text" id="token" placeholder="Вставьте токен">
+            </div>
+            <div id="tokenInfo" class="token-info hidden">
+                <div class="building" id="tokenBuilding"></div>
+                <div class="role" id="tokenRole"></div>
+            </div>
+            <div id="resident-fields" class="hidden">
+                <div class="field">
+                    <label for="name">Ваше имя</label>
+                    <input type="text" id="name" placeholder="Имя">
+                </div>
+                <div class="field">
+                    <label for="gender">Пол</label>
+                    <select id="gender">
+                        <option value="M">Мужской</option>
+                        <option value="F">Женский</option>
+                    </select>
+                </div>
+            </div>
+            <div id="admin-msg" class="hidden" style="text-align:center;color:#556cd6;margin-bottom:12px;font-size:.9em">
+                Нажмите «Войти» для входа
+            </div>
+            <button id="btn-activate" onclick="doActivate()">Войти</button>
+        </div>
+        <div id="error" class="error"></div>
+        <div id="success" class="success"></div>
+    </div>
+</div>
+
+<script>
+var tokenUsed = false;
+var tokenHasName = false;
+var tokenChecked = false;
+
+(function() {
+    var btn = document.getElementById('btn-activate');
+    btn.disabled = true;
+
+    var token = localStorage.getItem('ds_token');
+    if (token) {
+        fetch('/api/auth/me?token=' + encodeURIComponent(token))
+            .then(function(r) { if (!r.ok) throw 0; return r.json(); })
+            .then(function(info) {
+                if (info.role === 'superadmin') window.location.href = '/';
+                else if (info.role === 'admin') window.location.href = '/admin.html';
+                else window.location.href = '/view.html';
+            })
+            .catch(function() { localStorage.removeItem('ds_token'); });
+    }
+
+    var params = new URLSearchParams(window.location.search);
+    var urlToken = params.get('token');
+    if (urlToken) {
+        document.getElementById('token').value = urlToken;
+        checkToken(urlToken);
+    } else {
+        btn.disabled = false;
+    }
+})();
+
+function checkToken(token) {
+    if (!token) return;
+    var btn = document.getElementById('btn-activate');
+    btn.disabled = true;
+    fetch('/api/activate?token=' + encodeURIComponent(token))
+        .then(function(r) {
+            if (!r.ok) throw new Error('Токен не найден');
+            return r.json();
+        })
+        .then(function(info) {
+            var infoEl = document.getElementById('tokenInfo');
+            var buildingEl = document.getElementById('tokenBuilding');
+            var roleEl = document.getElementById('tokenRole');
+            var resFields = document.getElementById('resident-fields');
+            var adminMsg = document.getElementById('admin-msg');
+
+            buildingEl.textContent = info.building_name;
+            var roleLabels = { admin: 'Администратор', resident: 'Житель', superadmin: 'Суперадминистратор' };
+            roleEl.textContent = roleLabels[info.role] || info.role;
+            roleEl.className = 'role ' + info.role;
+
+            tokenUsed = info.used;
+            tokenHasName = !!(info.person_name);
+            tokenChecked = true;
+
+            if (info.used && info.person_name) {
+                adminMsg.textContent = 'Войти повторно?';
+                adminMsg.className = '';
+                resFields.classList.add('hidden');
+            } else if (info.used && !info.person_name) {
+                // Used but no name — must fill it now
+                resFields.classList.remove('hidden');
+                document.getElementById('name').value = '';
+                adminMsg.classList.add('hidden');
+            } else if (info.person_name) {
+                // Name pre-filled by admin — just show "Войти"
+                resFields.classList.remove('hidden');
+                document.getElementById('name').value = info.person_name;
+                if (info.person_gender) document.getElementById('gender').value = info.person_gender;
+                adminMsg.classList.add('hidden');
+            } else {
+                // No name — user MUST fill it
+                resFields.classList.remove('hidden');
+                document.getElementById('name').value = '';
+                adminMsg.classList.add('hidden');
+            }
+            infoEl.classList.remove('hidden');
+            btn.disabled = false;
+        })
+        .catch(function(e) {
+            document.getElementById('error').textContent = e.message;
+            document.getElementById('error').style.display = 'block';
+            btn.disabled = false;
+        });
+}
+
+document.getElementById('token').addEventListener('change', function() {
+    tokenChecked = false;
+    document.getElementById('btn-activate').disabled = true;
+    checkToken(this.value.trim());
+});
+
+function doActivate() {
+    var token = document.getElementById('token').value.trim();
+    var nameEl = document.getElementById('name');
+    var genderEl = document.getElementById('gender');
+    var errEl = document.getElementById('error');
+    var successEl = document.getElementById('success');
+    var btn = document.getElementById('btn-activate');
+
+    errEl.style.display = 'none';
+    successEl.style.display = 'none';
+    if (!token) { errEl.textContent = 'Введите токен'; errEl.style.display = 'block'; return; }
+
+    // First activation OR re-login without name — require name
+    if (!tokenHasName) {
+        var nameVal = nameEl ? nameEl.value.trim() : '';
+        if (!nameVal) {
+            errEl.textContent = 'Введите ваше имя';
+            errEl.style.display = 'block';
+            if (nameEl) nameEl.focus();
+            return;
+        }
+    }
+
+    btn.disabled = true;
+    var body = { token: token };
+    var nameVal = nameEl ? nameEl.value.trim() : '';
+    var genderVal = genderEl ? genderEl.value : 'M';
+    if (nameVal) { body.name = nameVal; body.gender = genderVal; }
+
+    fetch('/api/auth/activate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    })
+    .then(function(r) {
+        if (!r.ok) return r.json().then(function(e) { throw new Error(e.error || 'Ошибка ' + r.status); });
+        return r.json();
+    })
+    .then(function(info) {
+        localStorage.setItem('ds_token', token);
+        successEl.textContent = 'Добро пожаловать, ' + (info.name || info.role) + '!';
+        successEl.style.display = 'block';
+        setTimeout(function() {
+            if (info.role === 'superadmin') window.location.href = '/';
+            else if (info.role === 'admin') window.location.href = '/admin.html';
+            else window.location.href = '/view.html';
+        }, 500);
+    })
+    .catch(function(e) {
+        errEl.textContent = e.message || 'Ошибка подключения';
+        errEl.style.display = 'block';
+        btn.disabled = false;
+    });
+}
+</script>
+</body>
+</html>

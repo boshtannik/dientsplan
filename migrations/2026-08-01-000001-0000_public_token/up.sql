@@ -1,0 +1,1 @@
+ALTER TABLE buildings ADD COLUMN public_token TEXT NOT NULL DEFAULT '';

@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Дежурства — Просмотр</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0f172a;--card:#1e293b;--border:#334155;--text:#e2e8f0;--muted:#94a3b8;--accent:#38bdf8;--green:#4ade80;--red:#f87171;--orange:#fb923c;--pink:#f472b6;--yellow:#facc15}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.wrap{display:grid;grid-template-columns:1fr 260px;min-height:calc(100vh - 36px)}
+@media(max-width:900px){.wrap{grid-template-columns:1fr}.side{border-left:none;border-top:1px solid var(--border)}}
+.pnl{padding:14px;overflow-x:auto}
+.side{background:var(--card);border-left:1px solid var(--border);padding:14px;overflow-y:auto;max-height:100vh}
+.stitle{font-size:.8rem;font-weight:700;margin-bottom:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+.grid{border-collapse:collapse;width:100%;min-width:400px}
+.grid th,.grid td{border:1px solid var(--border);padding:4px 5px;text-align:center;vertical-align:top}
+.grid th{background:var(--card);color:var(--muted);font-size:.72rem;font-weight:600;position:sticky;top:0;z-index:1}
+.grid th.rh{text-align:left;min-width:100px;color:var(--text);font-size:.8rem}
+.grid td.dc{min-width:72px;height:36px}
+.chip{display:inline-flex;align-items:center;gap:2px;padding:2px 6px;border-radius:9px;font-size:.72rem;font-weight:600;margin:1px}
+.chip-m{background:rgba(56,189,248,.15);color:var(--accent);border:1px solid rgba(56,189,248,.3)}
+.chip-f{background:rgba(244,114,182,.15);color:var(--pink);border:1px solid rgba(244,114,182,.3)}
+.chip-x{background:rgba(248,113,113,.15);color:var(--red);border:1px solid rgba(248,113,113,.3)}
+.period-badge{font-size:.65rem;padding:2px 6px;border-radius:4px;font-weight:700;margin-left:4px}
+.period-badge.active{background:rgba(250,204,21,.15);color:var(--yellow)}
+.period-badge.not-started{background:rgba(74,222,128,.15);color:var(--green)}
+.period-badge.finished{background:rgba(148,163,184,.15);color:var(--muted)}
+.srow{display:flex;align-items:center;gap:5px;padding:4px 0;border-bottom:1px solid var(--border);cursor:pointer;border-radius:4px;transition:background .1s}
+.srow:last-child{border:none}
+.srow:hover{background:rgba(56,189,248,.06)}
+.sname{flex:1;font-size:.82rem;display:flex;align-items:center;gap:3px}
+.sbarw{flex:2;height:16px;background:var(--bg);border-radius:8px;overflow:hidden}
+.sbar{height:100%;border-radius:8px;transition:width .3s;display:flex;align-items:center;justify-content:flex-end;padding-right:4px;font-size:.65rem;font-weight:700;color:#000}
+.scnt{min-width:22px;text-align:right;font-weight:700;font-size:.85rem}
+.gb{display:inline-block;width:6px;height:6px;border-radius:50%}
+.gb.m{background:var(--accent)}.gb.f{background:var(--pink)}
+.plist{display:flex;flex-direction:column;gap:2px;margin-bottom:8px}
+.pitem{display:flex;align-items:center;gap:5px;padding:4px 6px;border-radius:4px;background:var(--bg);font-size:.8rem}
+.pitem .pn{flex:1}
+.empty{color:var(--muted);font-style:italic;text-align:center;padding:14px;font-size:.82rem}
+.mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;justify-content:center;align-items:center}
+.mo.on{display:flex}
+.md{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;min-width:280px;max-width:400px}
+.md h3{margin-bottom:8px;font-size:.92rem}
+.md .cb{float:right;background:none;border:none;color:var(--muted);font-size:1.1rem;cursor:pointer}
+.md label{display:block;font-size:.78rem;color:var(--muted);margin-bottom:2px}
+.md input,.md select{width:100%;background:var(--bg);color:var(--text);border:1px solid var(--border);padding:6px;border-radius:5px;font-size:.82rem;margin-bottom:6px}
+.btn-p{background:var(--accent);color:#000;padding:5px 10px;border:none;border-radius:5px;cursor:pointer;font-size:.78rem;font-weight:600}
+.btn-r{background:var(--red);color:#000;padding:5px 10px;border:none;border-radius:5px;cursor:pointer;font-size:.78rem;font-weight:600}
+.my-hl{background:rgba(56,189,248,.08) !important}
+.hist-item{padding:6px 0;border-bottom:1px solid var(--border)}.hist-item:last-child{border:none}
+.hist-period{font-weight:600;font-size:.85rem;margin-bottom:3px}
+.hist-day{font-size:.78rem;color:var(--muted);padding-left:8px}
+.toolbar{background:var(--card);border-bottom:1px solid var(--border);padding:6px 12px;display:flex;align-items:center;gap:6px}
+.toolbar select{background:var(--bg);color:var(--text);border:1px solid var(--border);padding:4px 6px;border-radius:4px;font-size:.78rem}
+</style>
+</head>
+<body>
+
+<div class="toolbar" id="toolbar">
+  <span id="pBadge"></span>
+  <select id="pSel"></select>
+</div>
+
+<div class="wrap">
+  <div class="pnl">
+    <div style="overflow-x:auto">
+      <table class="grid"><thead id="gH"></thead><tbody id="gB"></tbody></table>
+    </div>
+    <div class="empty" id="emp">Нет данных</div>
+  </div>
+  <div class="side">
+    <div style="margin-bottom:14px">
+      <div class="stitle">Рейтинг</div>
+      <div id="rank"></div>
+    </div>
+    <div>
+      <div class="stitle">Мои отсутствия</div>
+      <button class="btn-p" onclick="showAbsenceModal()" id="btnAbs" style="width:100%;margin-bottom:6px">+ Отсутствие</button>
+      <div class="plist" id="absL"></div>
+    </div>
+  </div>
+</div>
+
+<div class="mo" id="abModal"><div class="md">
+  <button class="cb" onclick="document.getElementById('abModal').classList.remove('on')">&times;</button>
+  <h3>Отсутствие</h3>
+  <label>С</label><input id="abFrom" type="date">
+  <label>Дней</label><input id="abDays" type="number" min="1" value="1">
+  <label>Причина</label><select id="abWhy"><option value="sick">Болеет</option><option value="absent">Отсутствует</option><option value="vacation">Отпуск</option><option value="other">Прочее</option></select>
+  <button class="btn-r" onclick="createAbsence()" style="width:100%">Пометить</button>
+</div></div>
+
+<div class="mo" id="hModal"><div class="md" style="max-height:80vh;overflow-y:auto">
+  <button class="cb" onclick="document.getElementById('hModal').classList.remove('on')">&times;</button>
+  <h3 id="hTitle">История</h3>
+  <div id="hBody"></div>
+</div></div>
+
+<script src="/menu.js"></script>
+<script>
+let bId=null,pId=null,view=null,myId=null,dsToken=null;
+
+function getToken(){
+  if(dsToken)return dsToken;
+  dsToken=localStorage.getItem('ds_token');
+  return dsToken;
+}
+
+function waitForAuth(){
+  return new Promise(function(res){
+    function check(){if(window.ds_auth){res();}else setTimeout(check,50);}
+    check();
+  });
+}
+
+async function api(u,o={}){
+  const token=getToken();
+  const sep=u.includes('?')?'&':'?';
+  const r=await fetch(u+sep+'token='+encodeURIComponent(token),{headers:{'Content-Type':'application/json'},...o,body:o.body?JSON.stringify(o.body):undefined});
+  if(!r.ok)throw new Error('API '+r.status);const t=await r.text();return t?JSON.parse(t):null;
+}
+
+function todayStr(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function addDays(dateStr,n){const p=dateStr.split('-').map(Number);let y=p[0],m=p[1],d=p[2]+n;while(d>daysInMonth(y,m)){d-=daysInMonth(y,m);m++;if(m>12){m=1;y++;}}return y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0');}
+function daysInMonth(y,m){return new Date(y,m,0).getDate();}
+
+function getPeriodStatus(period){
+  const today=todayStr();
+  if(period.start_date>today) return 'not-started';
+  const end=addDays(period.start_date,period.num_days);
+  if(end<=today) return 'finished';
+  return 'active';
+}
+
+function escHtml(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+
+async function loadPeriods(){
+  const ps=await api('/api/periods?building_id='+bId);
+  const sel=document.getElementById('pSel');
+  sel.innerHTML=ps.length?ps.map(p=>`<option value="${p.id}">${escHtml(p.name)} (${p.num_days}д)</option>`).join(''):'<option value="">Нет периодов</option>';
+  const cur=ps.find(p=>p.is_current);
+  if(cur){pId=cur.id;sel.value=cur.id;}
+  else if(ps.length){pId=ps[0].id;sel.value=pId;}
+  else pId=null;
+  updatePeriodBadge(ps);
+  if(pId)await loadView();
+  else{document.getElementById('emp').style.display='';document.getElementById('gH').innerHTML='';document.getElementById('gB').innerHTML='';}
+}
+document.getElementById('pSel').addEventListener('change',async e=>{pId=+e.target.value;if(pId){const ps=await api('/api/periods?building_id='+bId);updatePeriodBadge(ps);await loadView();}});
+
+function updatePeriodBadge(ps){
+  const p=ps.find(x=>x.id===pId);const badge=document.getElementById('pBadge');
+  if(!p){badge.innerHTML='';return;}
+  const st=getPeriodStatus(p);const labels={'not-started':'Не начался','active':'Идёт','finished':'Завершён'};
+  badge.innerHTML=`<span class="period-badge ${st}">${labels[st]}</span>`;
+}
+
+async function loadView(){
+  if(!pId||!bId)return;
+  try{view=await api('/api/periods/'+pId+'/view?building_id='+bId);}catch(e){view=null;}
+  if(!view){document.getElementById('emp').style.display='';return;}
+  document.getElementById('emp').style.display='none';
+  document.getElementById('gH').innerHTML='<tr><th class="rh">Помещение</th>'+view.days.map(d=>'<th>'+d.date+'</th>').join('')+'</tr>';
+  const b=document.getElementById('gB');b.innerHTML='';
+  const absentIds=view.absences.map(a=>a.person_id);
+  for(const room of view.rooms){
+    const tr=document.createElement('tr');
+    tr.innerHTML='<td class="rh" style="white-space:nowrap"><span style="color:var(--'+(room.gender==='F'?'pink':'accent')+')">●</span> '+room.name+'</td>';
+    for(const day of view.days){
+      const td=document.createElement('td');td.className='dc';
+      const ra=day.assignments.filter(a=>a.room_id===room.id);
+      for(const a of ra){
+        const isAbs=absentIds.includes(a.person_id);
+        const isMe=myId&&a.person_id===myId;
+        const gc=isAbs?'chip-x':(a.person_gender==='F'?'chip-f':'chip-m');
+        const chip=document.createElement('span');chip.className='chip '+gc;
+        if(isMe)chip.style.boxShadow='0 0 0 2px var(--accent)';
+        chip.textContent=a.person_name+(isAbs?' !':'');
+        td.appendChild(chip);
+      }
+      tr.appendChild(td);
+    }
+    b.appendChild(tr);
+  }
+  renderRank();
+}
+
+function renderRank(){
+  if(!view)return;
+  const el=document.getElementById('rank');
+  const ps=view.person_stats;if(!ps||!ps.length){el.innerHTML='<div class="empty">Нет людей</div>';return;}
+  const mx=Math.max(...ps.map(s=>s.total_duties),1);
+  el.innerHTML=ps.map(s=>{
+    const pct=(s.total_duties/mx*100).toFixed(0);
+    const isMe=myId&&s.person.id===myId;
+    return'<div class="srow'+(isMe?' my-hl':'')+'" onclick="showPersonHistory('+s.person.id+')"><span class="sname"><span class="gb '+s.person.gender.toLowerCase()+'"></span>'+s.person.name+'</span><div class="sbarw"><div class="sbar" style="width:'+pct+'%;background:var(--green)">'+s.total_duties+'</div></div><span class="scnt">'+s.total_duties+'</span></div>';
+  }).join('');
+}
+
+async function showPersonHistory(pid){
+  const h=await api('/api/people/'+pid+'/history');
+  document.getElementById('hTitle').textContent=h.person.name;
+  let html='<div style="margin-bottom:8px"><span class="gb '+h.person.gender.toLowerCase()+'"></span> '+escHtml(h.person.name)+' — <b>'+h.periods.reduce((s,p)=>s+p.assignments.length,0)+'</b> дежурств</div>';
+  for(const ph of h.periods){
+    html+='<div class="hist-item"><div class="hist-period">'+escHtml(ph.period.name)+' ('+ph.period.start_date+', '+ph.period.num_days+'д)</div>';
+    for(const a of ph.assignments){html+='<div class="hist-day">Д'+(a.day+1)+' — '+escHtml(a.room_name)+'</div>';}
+    html+='</div>';
+  }
+  if(!h.periods.length) html+='<div class="empty">Нет дежурств</div>';
+  document.getElementById('hBody').innerHTML=html;
+  document.getElementById('hModal').classList.add('on');
+}
+
+async function loadAbsences(){
+  if(!bId)return;
+  const abs=await api('/api/absences?building_id='+bId);
+  const mine=abs.filter(a=>myId&&a.person_id===myId);
+  document.getElementById('absL').innerHTML=mine.length?mine.map(a=>
+    '<div class="pitem"><span class="pn" style="flex:1;font-size:.75rem"><b>'+a.start_date+' — '+a.end_date+'</b><br><span style="color:var(--muted)">'+a.reason+'</span></span></div>'
+  ).join(''):'<div class="empty">Нет отсутствий</div>';
+}
+
+function showAbsenceModal(){
+  document.getElementById('abFrom').value=todayStr();
+  document.getElementById('abDays').value='1';
+  document.getElementById('abModal').classList.add('on');
+}
+
+async function createAbsence(){
+  const start=document.getElementById('abFrom').value;
+  const days=parseInt(document.getElementById('abDays').value)||1;
+  const end=addDays(start,days-1);
+  const reason=document.getElementById('abWhy').value;
+  if(!myId||!start)return;
+  await api('/api/absences',{method:'POST',body:{person_id:myId,start_date:start,end_date:end,reason}});
+  document.getElementById('abModal').classList.remove('on');
+  await loadAbsences();if(pId)loadView();
+}
+
+(async()=>{
+  await waitForAuth();
+  const auth=window.ds_auth;
+  if(!auth){return;}
+  bId=auth.building_id;
+  if(auth.name){
+    const people=await api('/api/people?building_id='+bId);
+    const me=people.find(p=>p.name===auth.name);
+    if(me)myId=me.id;
+  }
+  document.getElementById('btnAbs').style.display=myId?'':'none';
+  await loadPeriods();
+  await loadAbsences();
+})();
+</script>
+</body>
+</html>
